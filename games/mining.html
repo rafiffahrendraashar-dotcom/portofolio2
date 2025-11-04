@@ -1,0 +1,213 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>⛏️ Mining Game - Upgrade Version</title>
+  <style>
+    body {
+      background-color: #222;
+      color: #fff;
+      font-family: 'Courier New', monospace;
+      text-align: center;
+      margin: 0;
+      padding: 0;
+    }
+    h1 { margin-top: 10px; }
+    #gameCanvas {
+      display: block;
+      margin: 15px auto;
+      background-color: #333;
+      border: 2px solid #555;
+      border-radius: 10px;
+      cursor: pointer;
+    }
+    #ui {
+      font-size: 18px;
+      margin-top: 10px;
+    }
+    button {
+      margin: 5px;
+      padding: 10px 20px;
+      border: none;
+      border-radius: 10px;
+      background: #ff0;
+      color: #000;
+      font-weight: bold;
+      cursor: pointer;
+      transition: 0.3s;
+    }
+    button:hover {
+      background: #ffd700;
+    }
+    #notif {
+      margin-top: 5px;
+      color: #0f0;
+      font-size: 16px;
+      height: 20px;
+    }
+  </style>
+</head>
+<body>
+
+  <h1>⛏️ Mining Game - Upgrade</h1>
+  <canvas id="gameCanvas" width="400" height="400"></canvas>
+
+  <div id="ui">
+    💰 Koin: <span id="score">0</span> |
+    🔨 Pickaxe: <span id="pickaxeName">Kayu</span>
+  </div>
+
+  <button onclick="upgradePickaxe()">Upgrade Pickaxe</button>
+  <button onclick="resetGame()">Reset Game</button>
+
+  <div id="notif"></div>
+
+  <script>
+    const canvas = document.getElementById("gameCanvas");
+    const ctx = canvas.getContext("2d");
+    const scoreDisplay = document.getElementById("score");
+    const pickaxeDisplay = document.getElementById("pickaxeName");
+    const notif = document.getElementById("notif");
+
+    const rows = 10;
+    const cols = 10;
+    const blockSize = 40;
+
+    const blockTypes = [
+      { color: "#7B3F00", value: 1, hp: 1 }, // Dirt
+      { color: "#B87333", value: 2, hp: 2 }, // Copper
+      { color: "#B0C4DE", value: 3, hp: 3 }, // Iron
+      { color: "#FFD700", value: 5, hp: 4 }, // Gold
+      { color: "#708090", value: 4, hp: 5 }  // Stone
+    ];
+
+    const pickaxes = [
+      { name: "Kayu", power: 1, cost: 0 },
+      { name: "Besi", power: 2, cost: 50 },
+      { name: "Emas", power: 3, cost: 200 },
+      { name: "Diamond", power: 5, cost: 500 }
+    ];
+
+    let grid = [];
+    let score = 0;
+    let pickaxeLevel = 0;
+
+    // 🔹 Ambil data dari localStorage kalau ada
+    if (localStorage.getItem("minerSave")) {
+      const data = JSON.parse(localStorage.getItem("minerSave"));
+      score = data.score;
+      pickaxeLevel = data.pickaxeLevel;
+    }
+
+    function createGrid() {
+      grid = [];
+      for (let y = 0; y < rows; y++) {
+        const row = [];
+        for (let x = 0; x < cols; x++) {
+          const type = blockTypes[Math.floor(Math.random() * blockTypes.length)];
+          row.push({ ...type, currentHP: type.hp, broken: false });
+        }
+        grid.push(row);
+      }
+    }
+
+    function drawGrid() {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      for (let y = 0; y < rows; y++) {
+        for (let x = 0; x < cols; x++) {
+          const block = grid[y][x];
+          if (!block.broken) {
+            ctx.fillStyle = block.color;
+            ctx.fillRect(x * blockSize, y * blockSize, blockSize - 2, blockSize - 2);
+          } else {
+            ctx.fillStyle = "#111";
+            ctx.fillRect(x * blockSize, y * blockSize, blockSize - 2, blockSize - 2);
+          }
+        }
+      }
+    }
+
+    canvas.addEventListener("click", e => {
+      const rect = canvas.getBoundingClientRect();
+      const x = Math.floor((e.clientX - rect.left) / blockSize);
+      const y = Math.floor((e.clientY - rect.top) / blockSize);
+      mineBlock(x, y);
+    });
+
+    function mineBlock(x, y) {
+      if (x < 0 || y < 0 || x >= cols || y >= rows) return;
+      const block = grid[y][x];
+      if (block.broken) return;
+
+      block.currentHP -= pickaxes[pickaxeLevel].power;
+
+      if (block.currentHP <= 0) {
+        block.broken = true;
+        score += block.value;
+        scoreDisplay.textContent = score;
+        saveData();
+
+        const sound = new Audio("https://actions.google.com/sounds/v1/cartoon/wood_plank_flicks.ogg");
+        sound.play();
+
+        setTimeout(() => {
+          block.broken = false;
+          block.currentHP = block.hp;
+          drawGrid();
+        }, 4000);
+      }
+      drawGrid();
+    }
+
+    function upgradePickaxe() {
+      if (pickaxeLevel >= pickaxes.length - 1) {
+        showNotif("🔝 Pickaxe sudah maksimal!");
+        return;
+      }
+      const next = pickaxes[pickaxeLevel + 1];
+      if (score >= next.cost) {
+        score -= next.cost;
+        pickaxeLevel++;
+        saveData();
+        showNotif(`✅ Upgrade ke ${next.name}!`);
+      } else {
+        showNotif(`❌ Butuh ${next.cost} koin!`);
+      }
+      updateUI();
+    }
+
+    function updateUI() {
+      scoreDisplay.textContent = score;
+      pickaxeDisplay.textContent = pickaxes[pickaxeLevel].name;
+    }
+
+    function showNotif(text) {
+      notif.textContent = text;
+      setTimeout(() => notif.textContent = "", 2000);
+    }
+
+    function saveData() {
+      localStorage.setItem("minerSave", JSON.stringify({
+        score,
+        pickaxeLevel
+      }));
+    }
+
+    function resetGame() {
+      if (confirm("Reset semua data?")) {
+        localStorage.removeItem("minerSave");
+        score = 0;
+        pickaxeLevel = 0;
+        createGrid();
+        updateUI();
+        drawGrid();
+      }
+    }
+
+    createGrid();
+    updateUI();
+    drawGrid();
+  </script>
+</body>
+</html>

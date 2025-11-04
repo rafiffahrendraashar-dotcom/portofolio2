@@ -1,0 +1,346 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>🚀 Space Shooter Ultimate Deluxe</title>
+  <style>
+    body {
+      margin: 0;
+      overflow: hidden;
+      background: black;
+      color: white;
+      font-family: Arial, sans-serif;
+    }
+    #hud {
+      position: absolute;
+      top: 10px;
+      left: 10px;
+      font-size: 18px;
+      line-height: 1.5;
+    }
+    #menuBtn {
+      position: absolute;
+      top: 10px;
+      right: 10px;
+      background: yellow;
+      color: black;
+      border: none;
+      padding: 8px 15px;
+      border-radius: 8px;
+      cursor: pointer;
+      font-weight: bold;
+    }
+    #controls {
+      position: absolute;
+      bottom: 10px;
+      left: 10px;
+      color: #aaa;
+      font-size: 14px;
+    }
+    #levelUpText {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      font-size: 40px;
+      color: cyan;
+      text-shadow: 0 0 10px cyan;
+      display: none;
+    }
+    #pauseMenu, #gameOver {
+      position: absolute;
+      top: 40%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      font-size: 28px;
+      text-align: center;
+      color: white;
+      display: none;
+    }
+    button {
+      background: yellow;
+      color: black;
+      border: none;
+      padding: 10px 20px;
+      border-radius: 10px;
+      cursor: pointer;
+      margin-top: 10px;
+      font-weight: bold;
+    }
+  </style>
+</head>
+<body>
+  <canvas id="gameCanvas" width="500" height="600"></canvas>
+
+  <div id="hud">
+    🚀 Level: <span id="level">1</span><br />
+    💥 Skor: <span id="score">0</span><br />
+    🏆 High Score: <span id="highScore">0</span><br />
+    🔝 High Level: <span id="highLevel">1</span>
+  </div>
+
+  <button id="menuBtn" onclick="togglePause()">☰ Menu</button>
+
+  <div id="controls">
+    🔼 Gerak: WASD / Panah<br />
+    🔫 Tembak: Spasi<br />
+    ⏸ Menu: Tombol kanan atas
+  </div>
+
+  <div id="levelUpText">LEVEL UP!</div>
+
+  <div id="pauseMenu">
+    ⏸ Game Dijeda<br /><br />
+    <button onclick="resumeGame()">▶️ Lanjut</button>
+    <button onclick="restartGame()">🔁 Ulangi</button>
+  </div>
+
+  <div id="gameOver">
+    💀 GAME OVER 💀<br /><br />
+    <button onclick="restartGame()">Coba Lagi</button>
+  </div>
+
+  <script>
+    const canvas = document.getElementById("gameCanvas");
+    const ctx = canvas.getContext("2d");
+
+    // UI
+    const levelText = document.getElementById("level");
+    const scoreText = document.getElementById("score");
+    const highScoreText = document.getElementById("highScore");
+    const highLevelText = document.getElementById("highLevel");
+    const pauseMenu = document.getElementById("pauseMenu");
+    const gameOverMenu = document.getElementById("gameOver");
+    const levelUpText = document.getElementById("levelUpText");
+
+    // Player
+    let player = { x: 230, y: 520, width: 40, height: 40, speed: 5 };
+
+    // Game state
+    let bullets = [];
+    let enemies = [];
+    let explosions = [];
+    let stars = Array.from({ length: 100 }, () => ({
+      x: Math.random() * canvas.width,
+      y: Math.random() * canvas.height,
+      size: Math.random() * 2,
+      speed: Math.random() * 2 + 0.5
+    }));
+
+    let keys = {};
+    let score = 0;
+    let highScore = parseInt(localStorage.getItem("space_highscore") || "0");
+    let level = 1;
+    let highLevel = parseInt(localStorage.getItem("space_highlevel") || "1");
+    let nextLevelScore = 100;
+    let enemySpeed = 2;
+    let gameOver = false;
+    let paused = false;
+
+    // Suara
+    const shootSound = new Audio("https://actions.google.com/sounds/v1/alarms/beep_short.ogg");
+    const explodeSound = new Audio("https://actions.google.com/sounds/v1/explosions/explosion.ogg");
+
+    document.addEventListener("keydown", (e) => {
+      keys[e.code] = true;
+      if (e.code === "Space" && !paused && !gameOver) shoot();
+    });
+    document.addEventListener("keyup", (e) => (keys[e.code] = false));
+
+    function shoot() {
+      bullets.push({ x: player.x + 17, y: player.y, width: 6, height: 10 });
+      shootSound.currentTime = 0;
+      shootSound.play();
+    }
+
+    function spawnEnemy() {
+      if (paused || gameOver) return;
+      const x = Math.random() * (canvas.width - 40);
+      enemies.push({ x, y: 0, width: 40, height: 40, speed: enemySpeed });
+    }
+
+    function updateStars() {
+      stars.forEach((s) => {
+        s.y += s.speed;
+        if (s.y > canvas.height) {
+          s.y = 0;
+          s.x = Math.random() * canvas.width;
+        }
+      });
+    }
+
+    function drawStars() {
+      ctx.fillStyle = "white";
+      stars.forEach((s) => ctx.fillRect(s.x, s.y, s.size, s.size));
+    }
+
+    function drawPlayer() {
+      ctx.fillStyle = "#00FFFF";
+      ctx.beginPath();
+      ctx.moveTo(player.x + 20, player.y);
+      ctx.lineTo(player.x, player.y + 40);
+      ctx.lineTo(player.x + 40, player.y + 40);
+      ctx.closePath();
+      ctx.fill();
+    }
+
+    function drawBullets() {
+      ctx.fillStyle = "yellow";
+      bullets.forEach((b) => ctx.fillRect(b.x, b.y, b.width, b.height));
+    }
+
+    function drawEnemies() {
+      ctx.fillStyle = "red";
+      enemies.forEach((e) => ctx.fillRect(e.x, e.y, e.width, e.height));
+    }
+
+    function drawExplosions() {
+      explosions.forEach((ex) => {
+        ctx.beginPath();
+        ctx.arc(ex.x, ex.y, ex.radius, 0, Math.PI * 2);
+        ctx.fillStyle = `rgba(255,165,0,${ex.alpha})`;
+        ctx.fill();
+      });
+    }
+
+    function updateExplosions() {
+      explosions.forEach((ex) => {
+        ex.radius += 1;
+        ex.alpha -= 0.03;
+      });
+      explosions = explosions.filter((ex) => ex.alpha > 0);
+    }
+
+    function explosion(x, y) {
+      explosions.push({ x, y, radius: 10, alpha: 1 });
+      explodeSound.currentTime = 0;
+      explodeSound.play();
+    }
+
+    function update() {
+      if (gameOver || paused) return;
+
+      // Gerakan pemain
+      if (keys["ArrowLeft"] || keys["KeyA"]) player.x -= player.speed;
+      if (keys["ArrowRight"] || keys["KeyD"]) player.x += player.speed;
+      if (keys["ArrowUp"] || keys["KeyW"]) player.y -= player.speed;
+      if (keys["ArrowDown"] || keys["KeyS"]) player.y += player.speed;
+      player.x = Math.max(0, Math.min(canvas.width - player.width, player.x));
+      player.y = Math.max(0, Math.min(canvas.height - player.height, player.y));
+
+      // Update bintang
+      updateStars();
+
+      // Update peluru
+      bullets.forEach((b) => (b.y -= 6));
+      bullets = bullets.filter((b) => b.y > 0);
+
+      // Update musuh
+      enemies.forEach((e) => (e.y += e.speed));
+      enemies = enemies.filter((e) => e.y < canvas.height);
+
+      // Update ledakan
+      updateExplosions();
+
+      // Cek tabrakan
+      bullets.forEach((b, bi) => {
+        enemies.forEach((e, ei) => {
+          if (
+            b.x < e.x + e.width &&
+            b.x + b.width > e.x &&
+            b.y < e.y + e.height &&
+            b.y + b.height > e.y
+          ) {
+            bullets.splice(bi, 1);
+            enemies.splice(ei, 1);
+            score += 10;
+            explosion(e.x + 20, e.y + 20);
+
+            if (score > highScore) {
+              highScore = score;
+              localStorage.setItem("space_highscore", highScore);
+            }
+
+            if (score >= nextLevelScore) levelUp();
+          }
+        });
+      });
+
+      // Musuh kena pemain
+      enemies.forEach((e) => {
+        if (
+          player.x < e.x + e.width &&
+          player.x + player.width > e.x &&
+          player.y < e.y + e.height &&
+          player.y + player.height > e.y
+        ) {
+          explosion(player.x + 20, player.y + 20);
+          endGame();
+        }
+      });
+
+      // Gambar semua
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      drawStars();
+      drawPlayer();
+      drawBullets();
+      drawEnemies();
+      drawExplosions();
+
+      scoreText.textContent = score;
+      highScoreText.textContent = highScore;
+      levelText.textContent = level;
+      highLevelText.textContent = highLevel;
+    }
+
+    function levelUp() {
+      level++;
+      nextLevelScore += 100;
+      enemySpeed += 0.5;
+      showLevelUp();
+      if (level > highLevel) {
+        highLevel = level;
+        localStorage.setItem("space_highlevel", highLevel);
+      }
+    }
+
+    function showLevelUp() {
+      levelUpText.style.display = "block";
+      setTimeout(() => (levelUpText.style.display = "none"), 1500);
+    }
+
+    function endGame() {
+      gameOver = true;
+      gameOverMenu.style.display = "block";
+    }
+
+    function restartGame() {
+      score = 0;
+      level = 1;
+      nextLevelScore = 100;
+      enemySpeed = 2;
+      enemies = [];
+      bullets = [];
+      explosions = [];
+      gameOver = false;
+      paused = false;
+      gameOverMenu.style.display = "none";
+    }
+
+    function togglePause() {
+      if (gameOver) return;
+      paused = !paused;
+      pauseMenu.style.display = paused ? "block" : "none";
+    }
+
+    function resumeGame() {
+      paused = false;
+      pauseMenu.style.display = "none";
+    }
+
+    setInterval(update, 20);
+    setInterval(spawnEnemy, 1000);
+  </script>
+</body>
+</html>

@@ -1,0 +1,200 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>🐦 Flappy Bird Deluxe</title>
+  <style>
+    body {
+      background: #70c5ce;
+      text-align: center;
+      font-family: "Courier New", monospace;
+      color: #333;
+      overflow: hidden;
+    }
+    canvas {
+      background: #70c5ce;
+      display: block;
+      margin: 20px auto;
+      border: 2px solid #222;
+      border-radius: 10px;
+    }
+    #overlay {
+      position: absolute;
+      top: 0; left: 0;
+      width: 100%; height: 100%;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      flex-direction: column;
+      background-color: rgba(0,0,0,0.6);
+      color: white;
+      font-size: 28px;
+      visibility: hidden;
+    }
+    button {
+      margin-top: 15px;
+      padding: 10px 20px;
+      background-color: #ff0;
+      color: #000;
+      border: none;
+      border-radius: 10px;
+      cursor: pointer;
+      font-weight: bold;
+      transition: 0.2s;
+    }
+    button:hover {
+      background-color: #ffd700;
+    }
+  </style>
+</head>
+<body>
+
+  <h1>🐦 Flappy Bird Deluxe</h1>
+  <canvas id="game" width="400" height="500"></canvas>
+  <p>Tekan <strong>SPASI</strong> atau klik untuk terbang!</p>
+
+  <div id="overlay">
+    <div>💀 <b>Game Over!</b></div>
+    <div id="scoreDisplay"></div>
+    <button onclick="restartGame()">Coba Lagi</button>
+  </div>
+
+ <script>
+  const canvas = document.getElementById("game");
+  const ctx = canvas.getContext("2d");
+  const overlay = document.getElementById("overlay");
+  const scoreDisplay = document.getElementById("scoreDisplay");
+
+  const flapSound = new Audio("https://actions.google.com/sounds/v1/cartoon/wood_plank_flicks.ogg");
+  const pointSound = new Audio("https://actions.google.com/sounds/v1/cartoon/clang_and_wobble.ogg");
+  const hitSound = new Audio("https://actions.google.com/sounds/v1/cartoon/metal_clang.ogg");
+
+  let bird, gravity, lift, velocity, pipes, score, groundX, clouds, gameLoop, highScore;
+  const pipeGap = 150;
+  const pipeWidth = 60;
+  const pipeSpeed = 2;
+
+  function init() {
+    bird = { x: 80, y: 250, radius: 15 };
+    gravity = 0.35;
+    lift = -6;
+    velocity = 0;
+    pipes = [];
+    score = 0;
+    groundX = 0;
+    clouds = [
+      { x: 50, y: 80, size: 40 },
+      { x: 250, y: 120, size: 60 },
+      { x: 150, y: 50, size: 30 }
+    ];
+    highScore = localStorage.getItem("flappyHighScore") || 0;
+    overlay.style.visibility = "hidden";
+    clearInterval(gameLoop);
+    gameLoop = setInterval(update, 20);
+    spawnPipe();
+  }
+
+  function spawnPipe() {
+    const height = Math.floor(Math.random() * 180) + 50;
+    pipes.push({ x: canvas.width, top: height, bottom: height + pipeGap, passed: false });
+  }
+
+  document.addEventListener("keydown", e => { if (e.code === "Space") fly(); });
+  document.addEventListener("click", fly);
+
+  function fly() {
+    velocity = lift;
+    flapSound.currentTime = 0;
+    flapSound.play();
+  }
+
+  function drawCloud(x, y, size) {
+    ctx.fillStyle = "white";
+    ctx.beginPath();
+    ctx.arc(x, y, size, 0, Math.PI * 2);
+    ctx.arc(x + size, y + 10, size * 0.8, 0, Math.PI * 2);
+    ctx.arc(x + size * 2, y, size, 0, Math.PI * 2);
+    ctx.fill();
+  }
+
+  function update() {
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    clouds.forEach(c => {
+      c.x -= 0.5;
+      if (c.x + c.size * 2 < 0) c.x = canvas.width + 100;
+      drawCloud(c.x, c.y, c.size);
+    });
+
+    velocity += gravity;
+    bird.y += velocity;
+    ctx.fillStyle = "yellow";
+    ctx.beginPath();
+    ctx.arc(bird.x, bird.y, bird.radius, 0, Math.PI * 2);
+    ctx.fill();
+
+    for (let i = 0; i < pipes.length; i++) {
+      let p = pipes[i];
+      p.x -= pipeSpeed;
+
+      ctx.fillStyle = "green";
+      ctx.fillRect(p.x, 0, pipeWidth, p.top);
+      ctx.fillRect(p.x, p.bottom, pipeWidth, canvas.height - p.bottom);
+
+      if (
+        bird.x + bird.radius > p.x &&
+        bird.x - bird.radius < p.x + pipeWidth &&
+        (bird.y - bird.radius < p.top || bird.y + bird.radius > p.bottom)
+      ) {
+        hitSound.play();
+        return gameOver();
+      }
+
+      if (!p.passed && p.x + pipeWidth < bird.x) {
+        score++;
+        p.passed = true;
+        pointSound.play();
+      }
+    }
+
+    if (pipes.length && pipes[0].x < -pipeWidth) pipes.shift();
+    if (pipes[pipes.length - 1].x < 200) spawnPipe();
+
+    groundX -= pipeSpeed;
+    if (groundX <= -40) groundX = 0;
+    ctx.fillStyle = "#DEB887";
+    for (let i = 0; i < canvas.width / 40 + 2; i++) {
+      ctx.fillRect(groundX + i * 40, canvas.height - 40, 40, 40);
+    }
+
+    if (bird.y + bird.radius > canvas.height - 40 || bird.y - bird.radius < 0) {
+      hitSound.play();
+      return gameOver();
+    }
+
+    ctx.fillStyle = "#000";
+    ctx.font = "20px Courier";
+    ctx.fillText("Skor: " + score, 10, 480);
+    ctx.fillText("High Score: " + highScore, 200, 480);
+  }
+
+  function gameOver() {
+    clearInterval(gameLoop);
+    if (score > highScore) {
+      highScore = score;
+      localStorage.setItem("flappyHighScore", highScore);
+    }
+    scoreDisplay.innerHTML = `Skor kamu: ${score}<br>🏆 Rekor tertinggi: ${highScore}`;
+    overlay.style.visibility = "visible";
+  }
+
+  function restartGame() {
+    init();
+  }
+
+  init();
+</script>
+
+
+</body>
+</html>

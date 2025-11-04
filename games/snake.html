@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>🐍 Snake Game (WASD - Slow Mode)</title>
+  <style>
+    body {
+      background-color: #111;
+      color: #0f0;
+      font-family: 'Courier New', monospace;
+      text-align: center;
+      padding-top: 30px;
+    }
+    canvas {
+      background: #000;
+      border: 2px solid #0f0;
+      display: block;
+      margin: 20px auto;
+    }
+    #overlay {
+      position: absolute;
+      top: 0; left: 0;
+      width: 100%; height: 100%;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      flex-direction: column;
+      background-color: rgba(0,0,0,0.8);
+      color: #0f0;
+      font-size: 28px;
+      visibility: hidden;
+    }
+    button {
+      margin-top: 15px;
+      padding: 10px 20px;
+      background-color: #0f0;
+      color: #000;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+      font-weight: bold;
+      transition: 0.2s;
+    }
+    button:hover {
+      background-color: #7fff7f;
+    }
+  </style>
+</head>
+<body>
+
+  <h1>🐍 Snake Game (WASD)</h1>
+  <canvas id="game" width="400" height="400"></canvas>
+  <p>Gunakan tombol <strong>W A S D</strong> untuk bergerak!</p>
+  <p><a href="../index.html" style="color:#0f0;">⬅️ Kembali ke Menu</a></p>
+
+  <div id="overlay">
+    <div>💀 <b>Game Over!</b></div>
+    <div id="scoreDisplay"></div>
+    <button onclick="restartGame()">Coba Lagi</button>
+  </div>
+
+  <script>
+  const canvas = document.getElementById("game");
+  const ctx = canvas.getContext("2d");
+  const overlay = document.getElementById("overlay");
+  const scoreDisplay = document.getElementById("scoreDisplay");
+  const cellSize = 20;
+  const rows = 20;
+  const cols = 20;
+
+  let snake, food, direction, score, gameLoop, highScore;
+
+  function init() {
+    snake = [{ x: 10, y: 10 }];
+    direction = "RIGHT";
+    food = randomFood();
+    score = 0;
+    highScore = localStorage.getItem("snakeHighScore") || 0;
+    overlay.style.visibility = "hidden";
+    clearInterval(gameLoop);
+    gameLoop = setInterval(update, 150);
+  }
+
+  document.addEventListener("keydown", e => {
+    if (e.key === "w" && direction !== "DOWN") direction = "UP";
+    else if (e.key === "s" && direction !== "UP") direction = "DOWN";
+    else if (e.key === "a" && direction !== "RIGHT") direction = "LEFT";
+    else if (e.key === "d" && direction !== "LEFT") direction = "RIGHT";
+  });
+
+  function randomFood() {
+    return {
+      x: Math.floor(Math.random() * cols),
+      y: Math.floor(Math.random() * rows)
+    };
+  }
+
+  function update() {
+    const head = { ...snake[0] };
+    if (direction === "UP") head.y--;
+    else if (direction === "DOWN") head.y++;
+    else if (direction === "LEFT") head.x--;
+    else if (direction === "RIGHT") head.x++;
+
+    // Tabrak dinding atau diri sendiri
+    if (
+      head.x < 0 || head.x >= cols || head.y < 0 || head.y >= rows ||
+      snake.some(s => s.x === head.x && s.y === head.y)
+    ) {
+      return gameOver();
+    }
+
+    snake.unshift(head);
+
+    if (head.x === food.x && head.y === food.y) {
+      score++;
+      food = randomFood();
+    } else {
+      snake.pop();
+    }
+
+    ctx.fillStyle = "#111";
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+    ctx.fillStyle = "lime";
+    snake.forEach(s => ctx.fillRect(s.x * cellSize, s.y * cellSize, cellSize - 2, cellSize - 2));
+
+    ctx.fillStyle = "red";
+    ctx.fillRect(food.x * cellSize, food.y * cellSize, cellSize - 2, cellSize - 2);
+
+    ctx.fillStyle = "white";
+    ctx.font = "16px Courier";
+    ctx.fillText(`Skor: ${score}`, 10, 20);
+    ctx.fillText(`High Score: ${highScore}`, 250, 20);
+  }
+
+  function gameOver() {
+    clearInterval(gameLoop);
+    if (score > highScore) {
+      highScore = score;
+      localStorage.setItem("snakeHighScore", highScore);
+    }
+    scoreDisplay.innerHTML = `Skor kamu: ${score}<br>🏆 Rekor tertinggi: ${highScore}`;
+    overlay.style.visibility = "visible";
+  }
+
+  function restartGame() {
+    init();
+  }
+
+  init();
+</script>
+
+
+</body>
+</html>

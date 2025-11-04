@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>🖱️ Clicker Game</title>
+  <style>
+    body {
+      text-align: center;
+      background-color: #111;
+      color: #0f0;
+      font-family: 'Courier New', monospace;
+      padding-top: 50px;
+    }
+    button {
+      font-size: 20px;
+      padding: 20px 40px;
+      border-radius: 15px;
+      border: 2px solid #0f0;
+      background: black;
+      color: #0f0;
+      cursor: pointer;
+      transition: 0.2s;
+    }
+    button:hover {
+      background: #0f0;
+      color: #000;
+      transform: scale(1.1);
+    }
+    #score {
+      font-size: 25px;
+      margin: 20px;
+    }
+    #upgrade {
+      margin-top: 30px;
+      padding: 15px 25px;
+    }
+  </style>
+</head>
+<body>
+
+  <h1>🖱️ Clicker Game</h1>
+  <p id="score">Skor: 0</p>
+  <button id="clickBtn">Klik Aku!</button>
+  <br>
+  <button id="upgrade">Upgrade Power (Harga: 50)</button>
+  <br><br>
+  <a href="../index.html" style="color:#0f0;">⬅️ Kembali ke Menu</a>
+
+  <script>
+    let score = 0;
+    let power = 1;
+    let upgradeCost = 50;
+
+    const scoreDisplay = document.getElementById("score");
+    const clickBtn = document.getElementById("clickBtn");
+    const upgradeBtn = document.getElementById("upgrade");
+
+    clickBtn.addEventListener("click", () => {
+      score += power;
+      scoreDisplay.textContent = `Skor: ${score}`;
+    });
+
+    upgradeBtn.addEventListener("click", () => {
+      if (score >= upgradeCost) {
+        score -= upgradeCost;
+        power += 1;
+        upgradeCost = Math.round(upgradeCost * 1.7);
+        scoreDisplay.textContent = `Skor: ${score}`;
+        upgradeBtn.textContent = `Upgrade Power (Harga: ${upgradeCost})`;
+        alert("Power meningkat! Sekarang setiap klik bernilai lebih besar 💪");
+      } else {
+        alert("Skor kamu belum cukup untuk upgrade!");
+      }
+    });
+  </script>
+
+</body>
+</html>

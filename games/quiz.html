@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>🧠 Quiz Game</title>
+  <style>
+    body {
+      background-color: #111;
+      color: #0f0;
+      font-family: 'Courier New', monospace;
+      text-align: center;
+      padding: 50px;
+    }
+    .question-box {
+      margin: 20px auto;
+      padding: 20px;
+      background: #000;
+      border: 2px solid #0f0;
+      border-radius: 10px;
+      width: 400px;
+    }
+    button {
+      margin: 10px;
+      padding: 10px 20px;
+      border-radius: 10px;
+      border: 1px solid #0f0;
+      background: black;
+      color: #0f0;
+      cursor: pointer;
+      transition: 0.3s;
+    }
+    button:hover {
+      background: #0f0;
+      color: #000;
+    }
+  </style>
+</head>
+<body>
+
+  <h1>🧠 Quiz Game</h1>
+  <div id="quiz-container" class="question-box">
+    <h2 id="question">Pertanyaan akan muncul di sini...</h2>
+    <div id="answers"></div>
+  </div>
+
+  <p id="score">Skor: 0</p>
+  <a href="../index.html" style="color:#0f0;">⬅️ Kembali ke Menu</a>
+
+  <script>
+    const quizData = [
+      {
+        question: "Apa ibu kota Indonesia?",
+        options: ["Surabaya", "Jakarta", "Bandung", "Bali"],
+        correct: 1
+      },
+      {
+        question: "Planet terdekat dengan Matahari?",
+        options: ["Venus", "Mars", "Merkurius", "Bumi"],
+        correct: 2
+      },
+      {
+        question: "Siapa penemu lampu pijar?",
+        options: ["Einstein", "Newton", "Edison", "Tesla"],
+        correct: 2
+      },
+      {
+        question: "Berapa hasil dari 12 × 12?",
+        options: ["122", "124", "144", "142"],
+        correct: 2
+      }
+    ];
+
+    let current = 0;
+    let score = 0;
+
+    const questionEl = document.getElementById("question");
+    const answersEl = document.getElementById("answers");
+    const scoreEl = document.getElementById("score");
+
+    function loadQuestion() {
+      const q = quizData[current];
+      questionEl.textContent = q.question;
+      answersEl.innerHTML = "";
+
+      q.options.forEach((opt, i) => {
+        const btn = document.createElement("button");
+        btn.textContent = opt;
+        btn.onclick = () => checkAnswer(i);
+        answersEl.appendChild(btn);
+      });
+    }
+
+    function checkAnswer(i) {
+      const q = quizData[current];
+      if (i === q.correct) {
+        score += 10;
+        alert("Benar! ✅");
+      } else {
+        alert("Salah ❌");
+      }
+      scoreEl.textContent = `Skor: ${score}`;
+      current++;
+      if (current < quizData.length) {
+        loadQuestion();
+      } else {
+        questionEl.textContent = "🎉 Kuis selesai!";
+        answersEl.innerHTML = `<p>Total Skor: ${score}</p>`;
+      }
+    }
+
+    loadQuestion();
+  </script>
+</body>
+</html>
